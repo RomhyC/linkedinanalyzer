@@ -1,0 +1,2020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Post Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-color, #f3f2ef);
+            color: var(--text-primary, #000000de);
+            line-height: 1.6;
+            padding: 24px 16px;
+            min-height: 100vh;
+        }
+
+        .theme-picker {
+            max-width: 720px;
+            margin: 0 auto 16px auto;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .theme-label {
+            font-size: 13px;
+            color: var(--text-secondary, #00000099);
+            font-weight: 600;
+        }
+
+        .theme-select {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color, #e8ebed);
+            border-radius: 16px;
+            background: white;
+            color: var(--primary-color, #0a66c2);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-select:hover {
+            border-color: var(--primary-color, #0a66c2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .theme-select:focus {
+            outline: none;
+            border-color: var(--primary-color, #0a66c2);
+            box-shadow: 0 0 0 2px var(--primary-light, rgba(10, 102, 194, 0.1));
+        }
+
+        body[data-theme="linkedin"] {
+            --primary-color: #0a66c2;
+            --primary-hover: #004182;
+            --primary-light: rgba(10, 102, 194, 0.1);
+            --bg-color: #f3f2ef;
+            --text-primary: #000000de;
+            --text-secondary: #00000099;
+            --border-color: #e8ebed;
+        }
+
+        body[data-theme="neomorphic"] {
+            --primary-color: #5b9dd9;
+            --primary-hover: #4a8bc2;
+            --primary-light: rgba(91, 157, 217, 0.15);
+            --bg-color: #e0e5ec;
+            --text-primary: #4a5568;
+            --text-secondary: #718096;
+            --border-color: transparent;
+            --neo-shadow-1: 9px 9px 16px rgba(163, 177, 198, 0.6);
+            --neo-shadow-2: -9px -9px 16px rgba(255, 255, 255, 0.5);
+            --neo-inset-1: inset 6px 6px 10px rgba(163, 177, 198, 0.6);
+            --neo-inset-2: inset -6px -6px 10px rgba(255, 255, 255, 0.5);
+        }
+
+        body[data-theme="minimal"] {
+            --primary-color: #475569;
+            --primary-hover: #334155;
+            --primary-light: rgba(71, 85, 105, 0.08);
+            --bg-color: #f8fafc;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body[data-theme="dark"] {
+            --primary-color: #d4af37;
+            --primary-hover: #c19b2b;
+            --primary-light: rgba(212, 175, 55, 0.15);
+            --bg-color: #0a0f1e;
+            --text-primary: #ffffff;
+            --text-secondary: #e2e8f0;
+            --border-color: #1e293b;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.08);
+            padding: 40px;
+        }
+
+        body[data-theme="neomorphic"] .container {
+            background: #e0e5ec;
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] button {
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] button:hover {
+            box-shadow: var(--neo-inset-1), var(--neo-inset-2);
+        }
+
+        body[data-theme="neomorphic"] button:active {
+            box-shadow: var(--neo-inset-1), var(--neo-inset-2);
+        }
+
+        body[data-theme="neomorphic"] textarea {
+            background: #e0e5ec;
+            box-shadow: var(--neo-inset-1), var(--neo-inset-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] .framework-toggle,
+        body[data-theme="neomorphic"] .section {
+            background: #e0e5ec;
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] .mode-toggle {
+            background: #e0e5ec;
+            box-shadow: var(--neo-inset-1), var(--neo-inset-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] .mode-tab.active {
+            background: #e0e5ec;
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+        }
+
+        body[data-theme="neomorphic"] .score-item {
+            background: #e0e5ec;
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] .section-header {
+            background: #e0e5ec;
+        }
+
+        body[data-theme="neomorphic"] .clear-btn {
+            background: #e0e5ec;
+            box-shadow: var(--neo-shadow-1), var(--neo-shadow-2);
+            border: none;
+        }
+
+        body[data-theme="neomorphic"] .clear-btn:hover {
+            box-shadow: var(--neo-inset-1), var(--neo-inset-2);
+        }
+
+        body[data-theme="neomorphic"] .score-item::before {
+            background: var(--primary-color);
+        }
+
+        body[data-theme="neomorphic"] .score-fill {
+            background: var(--primary-color);
+        }
+
+        body[data-theme="neomorphic"] .score-value {
+            color: var(--primary-color);
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text-primary, #000000de);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary, #00000099);
+            font-size: 14px;
+            margin-bottom: 24px;
+            font-weight: 400;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+            background: var(--primary-light, #f3f6f8);
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color, #e8ebed);
+        }
+
+        .mode-tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary, #00000099);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-tab:hover {
+            background: #ffffff;
+            color: var(--text-primary, #000000de);
+        }
+
+        .mode-tab.active {
+            background: #ffffff;
+            color: var(--primary-color, #0a66c2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .mode-icon {
+            font-size: 16px;
+        }
+
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        .framework-toggle {
+            background: var(--primary-light, #f3f6f8);
+            border: 1px solid var(--border-color, #e8ebed);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .framework-toggle:hover {
+            background: var(--primary-light, #eef3f8);
+            border-color: var(--border-color, #d0d7de);
+        }
+
+        .framework-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .framework-title {
+            font-weight: 600;
+            color: var(--primary-color, #0a66c2);
+            font-size: 14px;
+        }
+
+        .toggle-icon {
+            color: var(--primary-color, #0a66c2);
+            transition: transform 0.3s ease;
+            font-size: 16px;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .framework-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .framework-content.expanded {
+            max-height: 500px;
+            margin-top: 16px;
+        }
+
+        .framework-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .framework-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #e8ebed;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+        }
+
+        .framework-item h4 {
+            color: var(--primary-color, #0a66c2);
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .framework-item p {
+            font-size: 12px;
+            color: var(--text-secondary, #00000099);
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-primary, #000000de);
+        }
+
+        .input-container {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px 16px;
+            border: 1px solid var(--text-secondary, #00000066);
+            border-radius: 2px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: all 0.2s ease;
+            color: var(--text-primary, #000000de);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary-color, #0a66c2);
+            box-shadow: 0 0 0 1px var(--primary-color, #0a66c2);
+        }
+
+        textarea.has-content {
+            border-color: var(--primary-color, #0a66c2);
+        }
+
+        .example-link {
+            position: absolute;
+            right: 0;
+            top: -28px;
+            font-size: 12px;
+            color: var(--primary-color, #0a66c2);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .example-link:hover {
+            text-decoration: underline;
+        }
+
+        .button-container {
+            margin-top: 16px;
+            margin-bottom: 32px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        button {
+            background: var(--primary-color, #0a66c2);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            background: var(--primary-hover, #004182);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .clear-btn {
+            background: transparent;
+            color: var(--text-secondary, #00000099);
+            border: 1px solid var(--text-secondary, #00000066);
+            box-shadow: none;
+        }
+
+        .clear-btn:hover {
+            background: var(--primary-light, #00000008);
+            border-color: var(--text-primary, #000000de);
+            color: var(--text-primary, #000000de);
+            box-shadow: none;
+        }
+
+        .char-counter {
+            font-size: 12px;
+            color: var(--text-secondary, #00000099);
+            margin-top: 4px;
+        }
+
+        .char-warning {
+            display: none;
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .char-warning.show {
+            display: block;
+        }
+
+        .char-warning.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .char-warning.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffd966;
+        }
+
+        .char-warning.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        #results {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+        }
+
+        #results.visible {
+            opacity: 1;
+            max-height: 10000px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e8ebed;
+            margin: 24px 0;
+        }
+
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary, #000000de);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color, #0a66c2);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .scorecard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .score-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #e8ebed;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        .score-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            border-color: #0a66c2;
+        }
+
+        .score-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #0a66c2;
+        }
+
+        .score-item.high-score {
+            background: var(--primary-light, linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%));
+            border-color: var(--primary-color, #0284c7);
+        }
+
+        .score-item.high-score::before {
+            background: var(--primary-color, linear-gradient(90deg, #0284c7, #0369a1));
+        }
+
+        .score-item.medium-score {
+            background: var(--primary-light, linear-gradient(135deg, #fefce8 0%, #fef9c3 100%));
+            border-color: var(--primary-color, #ca8a04);
+        }
+
+        .score-item.medium-score::before {
+            background: var(--primary-color, linear-gradient(90deg, #ca8a04, #a16207));
+        }
+
+        .score-item.low-score {
+            background: var(--primary-light, linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%));
+            border-color: var(--primary-color, #9333ea);
+        }
+
+        .score-item.low-score::before {
+            background: var(--primary-color, linear-gradient(90deg, #9333ea, #7e22ce));
+        }
+
+        .score-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--primary-color, #0a66c2);
+        }
+
+        .score-label {
+            font-size: 12px;
+            color: var(--text-secondary, #00000099);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .score-total {
+            font-size: 14px;
+            color: var(--text-secondary, #00000099);
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border-color, #e8ebed);
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.8s ease;
+            width: 0;
+            background: var(--primary-color);
+        }
+
+        .section {
+            margin-bottom: 24px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e8ebed;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+
+        .section:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-color: #d0d7de;
+        }
+
+        .section-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fafbfc;
+            user-select: none;
+        }
+
+        .section-header:hover {
+            background: #f3f6f8;
+        }
+
+        .section-header h2 {
+            margin: 0;
+        }
+
+        .collapse-arrow {
+            color: #00000099;
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+
+        .section.collapsed .collapse-arrow {
+            transform: rotate(-90deg);
+        }
+
+        .section-body {
+            padding: 20px;
+            max-height: 2000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+        }
+
+        .section.collapsed .section-body {
+            max-height: 0;
+            padding: 0 20px;
+        }
+
+        .section-body p {
+            color: var(--text-primary, #000000de);
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .section-body ul {
+            margin-left: 20px;
+            color: var(--text-primary, #000000de);
+        }
+
+        .section-body li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 4px;
+            font-size: 14px;
+        }
+
+        .section-body li::marker {
+            color: var(--primary-color, #0a66c2);
+        }
+
+        .example-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--primary-light, #e7f3ff);
+            color: var(--primary-color, #0a66c2);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color, #cce7ff);
+        }
+
+        .example-badge::before {
+            content: '✓';
+            font-size: 14px;
+        }
+
+        .rewrite-box {
+            background: #f3f6f8;
+            border: 1px solid #e8ebed;
+            padding: 20px;
+            border-radius: 8px;
+            color: #000000de;
+            line-height: 1.7;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .copy-btn {
+            background: white;
+            color: var(--primary-color, #0a66c2);
+            border: 1px solid var(--primary-color, #0a66c2);
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-light, #e7f3ff);
+            transform: translateY(-1px);
+        }
+
+        .copy-btn.copied {
+            background: #057642;
+            color: white;
+            border-color: #057642;
+        }
+
+        .suggestion-cards {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .suggestion-card {
+            background: white;
+            border: 1px solid #e8ebed;
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .suggestion-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary-color, #0a66c2);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .suggestion-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: var(--primary-color, #0a66c2);
+        }
+
+        .suggestion-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .suggestion-card.applied {
+            background: #f0f9ff;
+            border-color: #0284c7;
+        }
+
+        .suggestion-card.applied::before {
+            background: #0284c7;
+            transform: scaleY(1);
+        }
+
+        .suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary, #000000de);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .suggestion-icon {
+            font-size: 16px;
+        }
+
+        .suggestion-status {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: var(--border-color, #e8ebed);
+            color: var(--text-secondary, #00000099);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .suggestion-card.applied .suggestion-status {
+            background: #0284c7;
+            color: white;
+        }
+
+        .suggestion-text {
+            font-size: 13px;
+            color: var(--text-secondary, #00000099);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .apply-btn {
+            background: var(--primary-color, #0a66c2);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .apply-btn:hover {
+            background: var(--primary-hover, #004182);
+            transform: scale(1.05);
+        }
+
+        .dismiss-btn {
+            background: transparent;
+            color: var(--text-secondary, #00000066);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .dismiss-btn:hover {
+            background: var(--primary-light, #00000008);
+            color: var(--text-primary, #000000de);
+        }
+
+        .signature {
+            margin-top: 40px;
+            margin-bottom: 40px;
+            padding: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary, #00000099);
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .signature-line {
+            margin-bottom: 4px;
+        }
+
+        .signature-link {
+            color: var(--primary-color, #0a66c2);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .signature-link:hover {
+            color: var(--primary-hover, #004182);
+            text-decoration: underline;
+        }
+
+        .signature-badge {
+            display: inline-block;
+            background: var(--primary-light, #f3f6f8);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--primary-color, #0a66c2);
+            font-weight: 600;
+            margin-top: 8px;
+            border: 1px solid var(--border-color, #e8ebed);
+        }
+
+        .loading-animation {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-animation.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid var(--border-color, #e8ebed);
+            border-top: 3px solid var(--primary-color, #0a66c2);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary, #00000099);
+            font-size: 14px;
+            font-weight: 400;
+        }
+
+        body[data-theme="minimal"] button {
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 13px;
+            border-radius: 4px;
+            box-shadow: none;
+        }
+
+        body[data-theme="minimal"] button:hover {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        body[data-theme="minimal"] .container {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        body[data-theme="minimal"] .section {
+            box-shadow: none;
+            border: 1px solid var(--border-color);
+        }
+body[data-theme="minimal"] .score-item {
+        box-shadow: none;
+        border: 1px solid var(--border-color);
+    }
+
+    body[data-theme="minimal"] .framework-toggle {
+        box-shadow: none;
+    }
+
+    body[data-theme="minimal"] h1 {
+        font-weight: 500;
+        letter-spacing: -0.3px;
+    }
+
+    body[data-theme="minimal"] .score-item {
+        background: white;
+    }
+
+    body[data-theme="minimal"] .score-item::before {
+        background: var(--primary-color);
+    }
+
+    body[data-theme="minimal"] .score-fill {
+        background: var(--primary-color);
+    }
+
+    body[data-theme="minimal"] .score-value {
+        color: var(--primary-color);
+    }
+
+    body[data-theme="dark"] {
+        background: linear-gradient(180deg, #0a0f1e 0%, #1a1f35 100%);
+    }
+
+    body[data-theme="dark"] .container {
+        background: linear-gradient(180deg, #0f1629 0%, #1a1f35 100%);
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 1px rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.15);
+    }
+
+    body[data-theme="dark"] .section,
+    body[data-theme="dark"] .framework-toggle {
+        background: #0a0f1e;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(212, 175, 55, 0.05);
+    }
+
+    body[data-theme="dark"] .section p,
+    body[data-theme="dark"] .section li,
+    body[data-theme="dark"] .section-body p,
+    body[data-theme="dark"] .section-body li {
+        color: #ffffff !important;
+    }
+
+    body[data-theme="dark"] .mode-toggle {
+        background: #0a0f1e;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    body[data-theme="dark"] textarea {
+        background: #0a0f1e;
+        color: #ffffff;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+    }
+
+    body[data-theme="dark"] textarea::placeholder {
+        color: #94a3b8;
+    }
+
+    body[data-theme="dark"] button {
+        background: linear-gradient(135deg, #d4af37 0%, #f4d03f 50%, #d4af37 100%);
+        color: #0a0f1e;
+        font-weight: 700;
+        box-shadow: 0 4px 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.2);
+        border: none;
+    }
+
+    body[data-theme="dark"] button:hover {
+        background: linear-gradient(135deg, #f4d03f 0%, #d4af37 50%, #c19b2b 100%);
+        box-shadow: 0 6px 28px rgba(212, 175, 55, 0.7), 0 0 60px rgba(212, 175, 55, 0.4);
+        transform: translateY(-2px);
+    }
+
+    body[data-theme="dark"] .score-item {
+        background: linear-gradient(135deg, #0a0f1e 0%, #1a1f35 100%);
+        border: 1px solid rgba(212, 175, 55, 0.25);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(212, 175, 55, 0.1);
+    }
+
+    body[data-theme="dark"] .score-label,
+    body[data-theme="dark"] .score-value,
+    body[data-theme="dark"] .score-total {
+        color: #ffffff !important;
+    }
+
+    body[data-theme="dark"] .score-item::before {
+        background: linear-gradient(90deg, #d4af37, #f4d03f);
+    }
+
+    body[data-theme="dark"] .score-fill {
+        background: linear-gradient(90deg, #d4af37, #f4d03f);
+    }
+
+    body[data-theme="dark"] .score-value {
+        color: #f4d03f;
+    }
+
+    body[data-theme="dark"] .mode-tab.active {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.08) 100%);
+        color: #f4d03f;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    body[data-theme="dark"] .section-header {
+        background: #0a0f1e;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+    }
+
+    body[data-theme="dark"] .section-header:hover {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, transparent 100%);
+    }
+
+    body[data-theme="dark"] .clear-btn {
+        background: transparent;
+        border: 2px solid rgba(212, 175, 55, 0.4);
+        color: #f4d03f;
+    }
+
+    body[data-theme="dark"] .clear-btn:hover {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: #d4af37;
+        color: #ffffff;
+    }
+
+    body[data-theme="dark"] .rewrite-box {
+        background: #0a0f1e;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        color: #ffffff;
+    }
+
+    body[data-theme="dark"] .theme-select {
+        background: #0a0f1e;
+        color: #f4d03f;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+    }
+
+    body[data-theme="dark"] h1,
+    body[data-theme="dark"] h2 {
+        background: linear-gradient(135deg, #ffffff 0%, #f4d03f 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    body[data-theme="dark"] .section-icon {
+        background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+        color: #0a0f1e;
+        box-shadow: 0 2px 12px rgba(212, 175, 55, 0.5);
+    }
+
+    body[data-theme="dark"] .example-badge {
+        background: rgba(212, 175, 55, 0.15);
+        color: #f4d03f;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    body[data-theme="dark"] .copy-btn {
+        background: transparent;
+        color: #f4d03f;
+        border: 1.5px solid rgba(212, 175, 55, 0.4);
+    }
+
+    body[data-theme="dark"] .copy-btn:hover {
+        background: rgba(212, 175, 55, 0.15);
+        color: #ffffff;
+        border-color: #d4af37;
+    }
+
+    body[data-theme="dark"] .suggestion-title {
+        color: #d4af37 !important;
+    }
+
+    body[data-theme="dark"] .suggestion-text {
+        color: #0a0f1e !important;
+    }
+
+    body[data-theme="dark"] .suggestion-card {
+        background: #ffffff;
+    }
+
+    body[data-theme="dark"] .char-counter {
+        color: #94a3b8 !important;
+    }
+
+    body[data-theme="dark"] label {
+        color: #ffffff !important;
+    }
+
+    @media (max-width: 640px) {
+        body {
+            padding: 16px;
+        }
+
+        .container {
+            padding: 24px 20px;
+        }
+
+        .scorecard {
+            grid-template-columns: 1fr;
+        }
+
+        .framework-grid {
+            grid-template-columns: 1fr;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+
+        .button-container {
+            flex-direction: column;
+        }
+
+        button, .clear-btn {
+            width: 100%;
+        }
+    }
+</style>
+</head> 
+<body data-theme="linkedin">
+<div class="theme-picker">
+        <span class="theme-label">🎨 Preview Style:</span>
+        <select id="themeSwitcher" class="theme-select">
+            <option value="linkedin">LinkedIn Official</option>
+            <option value="neomorphic">Neomorphic</option>
+            <option value="minimal">Minimal Navy</option>
+            <option value="dark">Dark Mode Premium</option>
+        </select>
+    </div>
+
+    <div class="container">
+        <h1>LinkedIn Post Analyzer</h1>
+        <p class="subtitle">Analyze your posts using the Hook / Retain / Reward framework</p>
+
+        <div class="mode-toggle">
+            <button class="mode-tab active" id="analyzeTab">
+                <span class="mode-icon">📝</span>
+                Analyze My Post
+            </button>
+            <button class="mode-tab" id="learnTab">
+                <span class="mode-icon">🔬</span>
+                Learn from Best
+            </button>
+        </div>
+
+        <div class="mode-content active" id="analyzeMode">
+        
+        <div class="framework-toggle" id="frameworkToggle">
+            <div class="framework-header">
+                <span class="framework-title">💡 What is the Hook / Retain / Reward framework?</span>
+                <span class="toggle-icon" id="toggleIcon">▼</span>
+            </div>
+            <div class="framework-content" id="frameworkContent">
+                <p style="font-size: 14px; color: #000000de; margin-bottom: 16px; line-height: 1.6;">
+                    It's just a simple way to think about how people move through your content. First you give them a reason to stop, then you make it easy to stay, and at the end you give them something worth taking away.
+                </p>
+                <div class="framework-grid">
+                    <div class="framework-item">
+                        <h4>Hook</h4>
+                        <p>The first 1-2 lines that stop the scroll. Creates curiosity or presents a surprising insight.</p>
+                    </div>
+                    <div class="framework-item">
+                        <h4>Retain</h4>
+                        <p>The middle that keeps readers engaged through clarity, story, and value delivery.</p>
+                    </div>
+                    <div class="framework-item">
+                        <h4>Reward</h4>
+                        <p>The payoff. A memorable takeaway, insight, or clear next step that makes sharing worthwhile.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <label for="postInput">Paste LinkedIn post</label>
+        <div class="input-container">
+            <a href="#" class="example-link" id="exampleLink">Try an example post</a>
+            <textarea id="postInput" placeholder="Paste your LinkedIn post here..."></textarea>
+            <div class="char-counter" id="charCounter">0 characters</div>
+            <div class="char-warning" id="charWarning"></div>
+        </div>
+
+        <div class="button-container">
+            <button id="analyzeBtn">Analyze post</button>
+            <button class="clear-btn" id="clearBtn">Clear</button>
+        </div>
+
+        <div class="loading-animation" id="loadingAnimation">
+            <div class="spinner"></div>
+            <div class="loading-text">Analyzing your post...</div>
+        </div>
+
+        <div id="results"></div>
+        
+        </div>
+
+        <div class="mode-content" id="learnMode">
+            <div style="background: #f0f9ff; border: 1px solid #cce7ff; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; text-align: center;">
+                <div style="font-size: 20px; margin-bottom: 4px;">🔬</div>
+                <h2 style="color: #0a66c2; margin: 0 auto 4px auto; font-size: 16px; font-weight: 600; display: block; text-align: center;">Reverse Engineer Success</h2>
+                <p style="font-size: 12px; color: #00000099; line-height: 1.4; max-width: 420px; margin: 0 auto;">
+                    Paste any viral LinkedIn post and discover the exact framework that made it work
+                </p>
+            </div>
+
+            <label for="viralPostInput">Paste a successful LinkedIn post</label>
+            <div class="input-container">
+                <a href="#" class="example-link" id="exampleViralLink">Try a viral example</a>
+                <textarea id="viralPostInput" placeholder="Paste a high-performing LinkedIn post here to decode its success formula..."></textarea>
+                <div class="char-counter" id="viralCharCounter">0 characters</div>
+            </div>
+
+            <div class="button-container">
+                <button id="decodeBtn">🔬 Decode Success</button>
+                <button class="clear-btn" id="clearViralBtn">Clear</button>
+            </div>
+
+            <div class="loading-animation" id="decodeLoadingAnimation">
+                <div class="spinner"></div>
+                <div class="loading-text">Decoding framework patterns...</div>
+            </div>
+
+            <div id="decodeResults"></div>
+        </div>
+    </div>
+
+    <div class="signature">
+        <div class="signature-line">
+            Created by <a href="https://www.linkedin.com/in/romhyalexandracubas/" target="_blank" class="signature-link">Romhy Alexandra Cubas</a>
+        </div>
+        <div class="signature-line" style="font-style: italic;">
+            Hook / Retain / Reward Framework Analysis Tool
+        </div>
+        <div class="signature-badge">
+            Turing College Final Project
+        </div>
+    </div>
+
+    <script>
+        const themeSwitcher = document.getElementById('themeSwitcher');
+        
+        themeSwitcher.addEventListener('change', (e) => {
+            document.body.setAttribute('data-theme', e.target.value);
+            localStorage.setItem('selectedTheme', e.target.value);
+        });
+
+        const savedTheme = localStorage.getItem('selectedTheme') || 'linkedin';
+        document.body.setAttribute('data-theme', savedTheme);
+        themeSwitcher.value = savedTheme;
+
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const results = document.getElementById('results');
+        const postInput = document.getElementById('postInput');
+        const charCounter = document.getElementById('charCounter');
+        const charWarning = document.getElementById('charWarning');
+        const frameworkToggle = document.getElementById('frameworkToggle');
+        const frameworkContent = document.getElementById('frameworkContent');
+        const toggleIcon = document.getElementById('toggleIcon');
+        const exampleLink = document.getElementById('exampleLink');
+        const loadingAnimation = document.getElementById('loadingAnimation');
+
+        const analyzeTab = document.getElementById('analyzeTab');
+        const learnTab = document.getElementById('learnTab');
+        const analyzeMode = document.getElementById('analyzeMode');
+        const learnMode = document.getElementById('learnMode');
+
+        analyzeTab.addEventListener('click', () => {
+            analyzeTab.classList.add('active');
+            learnTab.classList.remove('active');
+            analyzeMode.classList.add('active');
+            learnMode.classList.remove('active');
+        });
+
+        learnTab.addEventListener('click', () => {
+            learnTab.classList.add('active');
+            analyzeTab.classList.remove('active');
+            learnMode.classList.add('active');
+            analyzeMode.classList.remove('active');
+        });
+
+        const examplePost = `I spent 6 months building a program nobody used.
+
+The content was solid. The marketing was there. But engagement? Crickets.
+
+Then I did something counterintuitive: I asked our worst performers what we got wrong.
+
+Turns out, we'd built what WE thought they needed—not what actually solved their problem.
+
+Three changes we made:
+→ Cut the curriculum by 40%
+→ Focused on one outcome instead of five
+→ Delivered it in their language, not ours
+
+Result: 87% completion rate. Up from 12%.
+
+The lesson? Your audience doesn't need more from you. They need more relevance.
+
+What's one feature you've built that users didn't actually want?`;
+
+        postInput.addEventListener('input', () => {
+            const length = postInput.value.length;
+            charCounter.textContent = `${length} character${length !== 1 ? 's' : ''}`;
+            
+            if (length > 0) {
+                postInput.classList.add('has-content');
+            } else {
+                postInput.classList.remove('has-content');
+            }
+
+            charWarning.classList.remove('show', 'success', 'warning', 'error');
+            
+            if (length === 0) {
+            } else if (length < 150) {
+                charWarning.textContent = '⚠️ Post is quite short - consider adding more detail for better engagement';
+                charWarning.classList.add('show', 'warning');
+            } else if (length > 3000) {
+                charWarning.textContent = '❌ Post exceeds LinkedIn\'s 3000 character limit';
+                charWarning.classList.add('show', 'error');
+            } else if (length > 2000) {
+                charWarning.textContent = '⚠️ Post is getting long - consider condensing for better readability';
+                charWarning.classList.add('show', 'warning');
+            } else if (length >= 1300 && length <= 2000) {
+                charWarning.textContent = '✓ Optimal length for LinkedIn engagement';
+                charWarning.classList.add('show', 'success');
+            }
+        });
+
+        frameworkToggle.addEventListener('click', () => {
+            frameworkContent.classList.toggle('expanded');
+            toggleIcon.classList.toggle('expanded');
+        });
+
+        exampleLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            postInput.value = examplePost;
+            postInput.dispatchEvent(new Event('input'));
+            postInput.focus();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            postInput.value = '';
+            postInput.dispatchEvent(new Event('input'));
+            results.classList.remove('visible');
+        });
+
+       const WEBHOOK_URL = "https://romhyalexandracubas.app.n8n.cloud/webhook/linkedin-analyzer-v2";
+
+async function analyzePost(postText) {
+    const res = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ post: postText })
+    });
+
+    const raw = await res.text();
+
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
+    }
+
+    try {
+        return JSON.parse(raw);
+    } catch {
+        throw new Error(`Invalid JSON returned from server: ${raw.slice(0, 200)}`);
+    }
+}
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (postInput.value.trim()) {
+                loadingAnimation.classList.add('active');
+                results.classList.remove('visible');
+                analyzeBtn.disabled = true;
+                
+                try {
+                    const analysis = await analyzePost(postInput.value);
+                    
+                    updateResults(analysis);
+                    
+                    loadingAnimation.classList.remove('active');
+                    results.classList.add('visible');
+                    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    setTimeout(() => {
+                        animateScoreBars(analysis.scores);
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('Analysis error:', error);
+                    loadingAnimation.classList.remove('active');
+                    
+                    results.innerHTML = `
+                        <div class="section">
+                            <div class="section-header">
+                                <h2 style="color: #dc3545;">
+                                    <span class="section-icon" style="background: #dc3545;">⚠️</span>
+                                    Analysis Error
+                                </h2>
+                            </div>
+                            <div class="section-body">
+                                <p><strong>Failed to analyze post.</strong></p>
+                                <p style="color: #00000099;">${error.message}</p>
+                                <p style="margin-top: 16px;">Please try again or contact support if the issue persists.</p>
+                            </div>
+                        </div>
+                    `;
+                    results.classList.add('visible');
+                } finally {
+                    analyzeBtn.disabled = false;
+                }
+            } else {
+                alert('Please paste a LinkedIn post to analyze.');
+            }
+        });
+
+        function animateScoreBars(scores) {
+            const scoreFills = document.querySelectorAll('.score-fill');
+            const scoreItems = document.querySelectorAll('.score-item');
+            
+            [scores.hook, scores.retain, scores.reward].forEach((score, index) => {
+                const fill = scoreFills[index];
+                const item = scoreItems[index];
+                
+                let category = '';
+                if (score >= 8) {
+                    category = 'high-score';
+                } else if (score >= 6) {
+                    category = 'medium-score';
+                } else {
+                    category = 'low-score';
+                }
+                
+                item.classList.add(category);
+                fill.classList.add(category);
+                
+                fill.style.width = (score * 10) + '%';
+            });
+        }
+
+        function updateResults(analysis) {
+
+ analysis.scores = analysis.scores || { hook: 0, retain: 0, reward: 0 };
+
+  analysis.skimmability = analysis.skimmability || [];
+  analysis.authority = analysis.authority || { suggestions: [] };
+  analysis.authority.suggestions = analysis.authority.suggestions || [];
+  analysis.virality = analysis.virality || { suggestions: [] };
+  analysis.virality.suggestions = analysis.virality.suggestions || [];
+            const resultsHTML = `
+            <span class="example-badge">AI Analysis Complete</span>
+            
+            <h2>
+                <span class="section-icon">📊</span>
+                Scorecard
+            </h2>
+            <div class="scorecard">
+                <div class="score-item" data-score="${analysis.scores.hook}">
+                    <div class="score-label">Hook</div>
+                    <div class="score-value">${analysis.scores.hook}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill" style="width: 0%"></div></div>
+                </div>
+                <div class="score-item" data-score="${analysis.scores.retain}">
+                    <div class="score-label">Retain</div>
+                    <div class="score-value">${analysis.scores.retain}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill" style="width: 0%"></div></div>
+                </div>
+                <div class="score-item" data-score="${analysis.scores.reward}">
+                    <div class="score-label">Reward</div>
+                    <div class="score-value">${analysis.scores.reward}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill" style="width: 0%"></div></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">💡</span>
+                        Quick Wins - Apply Instantly
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p style="margin-bottom: 16px;">Click "Apply" to automatically improve your post with these suggestions:</p>
+                    <div class="suggestion-cards" id="suggestionCards"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">📖</span>
+                        Core Narrative
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p>${analysis.core_narrative}</p>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">🎣</span>
+                        Hook Analysis
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p><strong>Strength:</strong> ${analysis.hook_analysis.strength}</p>
+                    <p><strong>Weakness:</strong> ${analysis.hook_analysis.weakness}</p>
+                    <p><strong>Recommendation:</strong> ${analysis.hook_analysis.recommendation}</p>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">👀</span>
+                        Skimmability & Clarity
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <ul>
+                        ${analysis.skimmability.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">⭐</span>
+                        Authority & Credibility
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p>${analysis.authority.summary}</p>
+                    <ul>
+                        ${analysis.authority.suggestions.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">💎</span>
+                        Value Distribution
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p><strong>Information:</strong> ${analysis.value_distribution.information}</p>
+                    <p><strong>Inspiration:</strong> ${analysis.value_distribution.inspiration}</p>
+                    <p><strong>Entertainment:</strong> ${analysis.value_distribution.entertainment}</p>
+                    <p><strong>Recommendation:</strong> ${analysis.value_distribution.recommendation}</p>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">🎯</span>
+                        CTA Optimization
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p><strong>Current CTA strength:</strong> ${analysis.cta.strength}</p>
+                    <p>Consider these improvements:</p>
+                    <ul>
+                        ${analysis.cta.suggestions.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                    <p><strong>Example:</strong> "${analysis.cta.example}"</p>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">🚀</span>
+                        Virality Prediction
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <p><strong>Estimated engagement potential:</strong> ${analysis.virality.potential}</p>
+                    <p>To increase viral potential:</p>
+                    <ul>
+                        ${analysis.virality.suggestions.map(item => `<li>${item}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>
+                        <span class="section-icon">✍️</span>
+                        Suggested Rewrite
+                    </h2>
+                    <span class="collapse-arrow">▼</span>
+                </div>
+                <div class="section-body">
+                    <div class="rewrite-box" id="rewriteContent">
+                        ${analysis.rewrite.replace(/\n/g, '<br>')}
+                    </div>
+                    <div style="margin-top: 12px; display: flex; gap: 8px;">
+                        <button class="copy-btn" id="copyRewriteBtn">
+                            📋 Copy rewrite
+                        </button>
+                    </div>
+                </div>
+            </div>
+            `;
+            
+            results.innerHTML = resultsHTML;
+            
+            generateSuggestionCards(analysis);
+            
+            document.querySelectorAll('.section-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    this.parentElement.classList.toggle('collapsed');
+                });
+            });
+            
+            const copyRewriteBtn = document.getElementById('copyRewriteBtn');
+            if (copyRewriteBtn) {
+                copyRewriteBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const rewriteContent = document.getElementById('rewriteContent');
+                    const textToCopy = rewriteContent.textContent.trim();
+                    
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '✓ Copied!';
+                        this.classList.add('copied');
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalText;
+                            this.classList.remove('copied');
+                        }, 2000);
+                    }).catch(err => {
+                        alert('Failed to copy to clipboard');
+                    });
+                });
+            }
+            
+            document.querySelectorAll('.score-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const score = item.dataset.score;
+                    const label = item.querySelector('.score-label').textContent;
+                    alert(`${label} Score: ${score}/10\n\nClick to see detailed breakdown of this dimension.`);
+                });
+            });
+        }
+
+        function generateSuggestionCards(analysis) {
+            const suggestions = [];
+            
+            if (analysis.scores.hook < 7) {
+                suggestions.push({
+                    icon: '🎣',
+                    title: 'Strengthen Your Hook',
+                    text: analysis.hook_analysis.recommendation,
+                    action: 'strengthen_hook'
+                });
+            }
+            
+            if (analysis.scores.reward < 7) {
+                suggestions.push({
+                    icon: '🎁',
+                    title: 'Add Stronger Takeaway',
+                    text: 'End with a clear, memorable insight that readers can apply immediately.',
+                    action: 'add_takeaway'
+                });
+            }
+            
+            if (analysis.cta.strength.toLowerCase().includes('weak') || analysis.cta.strength.toLowerCase().includes('moderate')) {
+                suggestions.push({
+                    icon: '📢',
+                    title: 'Improve Call-to-Action',
+                    text: analysis.cta.example,
+                    action: 'improve_cta'
+                });
+            }
+            
+            if (analysis.virality.potential === 'Low' || analysis.virality.potential === 'Medium') {
+                suggestions.push({
+                    icon: '🚀',
+                    title: 'Boost Engagement Potential',
+                    text: analysis.virality.suggestions[0] || 'Add emotional resonance or a quotable line.',
+                    action: 'boost_virality'
+                });
+            }
+            
+            const container = document.getElementById('suggestionCards');
+            if (!container || suggestions.length === 0) {
+                if (container) {
+                    container.innerHTML = '<p style="color: #0284c7; font-weight: 600;">◆ Excellent! Your post is already optimized. No critical improvements needed.</p>';
+                }
+                return;
+            }
+            
+            container.innerHTML = suggestions.map((suggestion, index) => `
+                <div class="suggestion-card" data-index="${index}">
+                    <div class="suggestion-header">
+                        <div class="suggestion-title">
+                            <span class="suggestion-icon">${suggestion.icon}</span>
+                            ${suggestion.title}
+                        </div>
+                        <span class="suggestion-status">Suggested</span>
+                    </div>
+                    <div class="suggestion-text">${suggestion.text}</div>
+                    <div class="suggestion-actions">
+                        <button class="apply-btn" onclick="applySuggestion(${index}, '${suggestion.action}')">
+                            ✓ Apply
+                        </button>
+                        <button class="dismiss-btn" onclick="dismissSuggestion(${index})">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        window.applySuggestion = function(index, action) {
+            const card = document.querySelector(`.suggestion-card[data-index="${index}"]`);
+            if (!card) return;
+            
+            card.classList.add('applied');
+            card.querySelector('.suggestion-status').textContent = 'Applied';
+            card.querySelector('.suggestion-actions').innerHTML = '<span style="color: #0284c7; font-size: 12px; font-weight: 600;">◆ Suggestion applied to your post</span>';
+            
+            alert('Noted. This improvement has been marked for your next revision.');
+        }
+        
+        window.dismissSuggestion = function(index) {
+            const card = document.querySelector(`.suggestion-card[data-index="${index}"]`);
+            if (!card) return;
+            
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+                card.remove();
+                
+                const remaining = document.querySelectorAll('.suggestion-card').length;
+                if (remaining === 0) {
+                    document.getElementById('suggestionCards').innerHTML = '<p style="color: #00000099; font-style: italic;">All suggestions dismissed.</p>';
+                }
+            }, 300);
+        }
+
+        const viralPostInput = document.getElementById('viralPostInput');
+        const viralCharCounter = document.getElementById('viralCharCounter');
+        const exampleViralLink = document.getElementById('exampleViralLink');
+        const decodeBtn = document.getElementById('decodeBtn');
+        const clearViralBtn = document.getElementById('clearViralBtn');
+        const decodeLoadingAnimation = document.getElementById('decodeLoadingAnimation');
+        const decodeResults = document.getElementById('decodeResults');
+
+        const viralExamplePost = `I got fired from my dream job.
+
+Best thing that ever happened to me.
+
+Here's why losing everything forced me to build something better:
+
+2 years ago, I was the "rising star" at a tech company.
+Great salary. Corner office. All the validation I thought I needed.
+
+Then one day: "We're going in a different direction."
+
+I spent 3 months applying to similar roles.
+Got nowhere.
+
+Then I stopped trying to recreate what I lost.
+Started asking: what would I build if I wasn't trying to impress anyone?
+
+6 months later:
+→ Launched my own consultancy
+→ Tripled my old salary
+→ Work with clients I actually respect
+→ Set my own hours
+
+The job I thought was my dream was just someone else's vision of success.
+
+Getting fired didn't end my career.
+It started it.
+
+What's one "failure" that turned into your biggest opportunity?`;
+
+        viralPostInput.addEventListener('input', () => {
+            const length = viralPostInput.value.length;
+            viralCharCounter.textContent = `${length} character${length !== 1 ? 's' : ''}`;
+            
+            if (length > 0) {
+                viralPostInput.classList.add('has-content');
+            } else {
+                viralPostInput.classList.remove('has-content');
+            }
+        });
+
+        exampleViralLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            viralPostInput.value = viralExamplePost;
+            viralPostInput.dispatchEvent(new Event('input'));
+            viralPostInput.focus();
+        });
+
+        clearViralBtn.addEventListener('click', () => {
+            viralPostInput.value = '';
+            viralPostInput.dispatchEvent(new Event('input'));
+            decodeResults.classList.remove('visible');
+        });
+
+        decodeBtn.addEventListener('click', async () => {
+            if (viralPostInput.value.trim()) {
+                decodeLoadingAnimation.classList.add('active');
+                decodeResults.classList.remove('visible');
+                decodeBtn.disabled = true;
+                
+                try {
+                    const analysis = await analyzePost(viralPostInput.value);
+                    
+                    updateDecodeResults(analysis);
+                    
+                    decodeLoadingAnimation.classList.remove('active');
+                    decodeResults.classList.add('visible');
+                    decodeResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                } catch (error) {
+                    console.error('Decode error:', error);
+                    decodeLoadingAnimation.classList.remove('active');
+                    
+                    decodeResults.innerHTML = `
+                        <div class="section">
+                            <div class="section-header">
+                                <h2 style="color: #dc3545;">
+                                    <span class="section-icon" style="background: #dc3545;">⚠️</span>
+                                    Analysis Error
+                                </h2>
+                            </div>
+                            <div class="section-body">
+                                <p><strong>Failed to decode post.</strong></p>
+                                <p style="color: #00000099;">${error.message}</p>
+                                <p style="margin-top: 16px;">Please try again or contact support if the issue persists.</p>
+                            </div>
+                        </div>
+                    `;
+                    decodeResults.classList.add('visible');
+                } finally {
+                    decodeBtn.disabled = false;
+                }
+            } else {
+                alert('Please paste a LinkedIn post to decode.');
+            }
+        });
+
+        function updateDecodeResults(analysis) {
+            const resultsHTML = `
+            <span class="example-badge">Success Decoded</span>
+            
+            <h2>
+                <span class="section-icon">📊</span>
+                Framework Scores
+            </h2>
+            <div class="scorecard">
+                <div class="score-item high-score" data-score="${analysis.scores.hook}">
+                    <div class="score-label">Hook</div>
+                    <div class="score-value high-score">${analysis.scores.hook}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill high-score" style="width: ${analysis.scores.hook * 10}%"></div></div>
+                </div>
+                <div class="score-item high-score" data-score="${analysis.scores.retain}">
+                    <div class="score-label">Retain</div>
+                    <div class="score-value high-score">${analysis.scores.retain}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill high-score" style="width: ${analysis.scores.retain * 10}%"></div></div>
+                </div>
+                <div class="score-item high-score" data-score="${analysis.scores.reward}">
+                    <div class="score-label">Reward</div>
+                    <div class="score-value high-score">${analysis.scores.reward}<span class="score-total">/10</span></div>
+                    <div class="score-bar"><div class="score-fill high-score" style="width: ${analysis.scores.reward * 10}%"></div></div>
+                </div>
+            </div>
+<div class="divider"></div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span class="section-icon">🎯</span>
+                    Why This Works
+                </h2>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body">
+                <p>${analysis.why_it_works || analysis.core_narrative}</p>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>
+                    <span class="section-icon">🎣</span>
+                    Hook Breakdown
+                </h2>
+                <span class="collapse-arrow">▼</span>
+            </div>
+            <div class="section-body">
+                <p><strong>Technique Used:</strong> ${analysis.hook_breakdown?.technique || analysis.hook_analysis.strength}</p>
+                <p><strong>Psychology:</strong> ${analysis.hook_breakdown?.psychology || analysis.hook_analysis.weakness}</p>
+                <p><strong>How to Replicate:</strong> ${analysis.hook_breakdown?.replicable_pattern || analysis.hook_analysis.recommendation}</p>
+            </div>
+        </div>
+        `;
+        
+        decodeResults.innerHTML = resultsHTML;
+        
+        document.querySelectorAll('.section-header').forEach(header => {
+            header.addEventListener('click', function() {
+                this.parentElement.classList.toggle('collapsed');
+            });
+        });
+    }
+</script>
+</body>
+</html>
